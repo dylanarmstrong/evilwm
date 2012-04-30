@@ -26,6 +26,7 @@ static void handle_key_event(XKeyEvent *e) {
 	KeySym key = XKeycodeToKeysym(dpy,e->keycode,0);
 	Client *c;
 	int width_inc, height_inc;
+  bool move_client;
 	ScreenInfo *current_screen;
 	PhysicalScreen *current_phy;
 	find_current_screen_and_phy(&current_screen, &current_phy);
@@ -81,7 +82,8 @@ static void handle_key_event(XKeyEvent *e) {
 	if (c == NULL) return;
 	width_inc = (c->width_inc > 1) ? c->width_inc : 16;
 	height_inc = (c->height_inc > 1) ? c->height_inc : 16;
-	switch (key) {
+	move_client = false;
+  switch (key) {
 		case KEY_LEFT:
 			if (e->state & altmask) {
 				if ((c->width - width_inc) >= c->min_width)
@@ -89,7 +91,8 @@ static void handle_key_event(XKeyEvent *e) {
 			} else {
 				c->nx -= 16;
 			}
-			goto move_client;
+      move_client = true;
+      break;
 		case KEY_DOWN:
 			if (e->state & altmask) {
 				if (!c->max_height || (c->height + height_inc) <= c->max_height)
@@ -97,7 +100,8 @@ static void handle_key_event(XKeyEvent *e) {
 			} else {
 				c->ny += 16;
 			}
-			goto move_client;
+      move_client = true;
+      break;
 		case KEY_UP:
 			if (e->state & altmask) {
 				if ((c->height - height_inc) >= c->min_height)
@@ -105,7 +109,8 @@ static void handle_key_event(XKeyEvent *e) {
 			} else {
 				c->ny -= 16;
 			}
-			goto move_client;
+      move_client = true;
+      break;
 		case KEY_RIGHT:
 			if (e->state & altmask) {
 				if (!c->max_width || (c->width + width_inc) <= c->max_width)
@@ -113,24 +118,29 @@ static void handle_key_event(XKeyEvent *e) {
 			} else {
 				c->nx += 16;
 			}
-			goto move_client;
+      move_client = true;
+      break;
 		case KEY_TOPLEFT:
 			c->nx = c->border;
 			c->ny = c->border;
-			goto move_client;
+      move_client = true;
+      break;
 		case KEY_TOPRIGHT:
 			c->nx = c->phy->width - c->width - c->border;
 			c->ny = c->border;
-			goto move_client;
-		case KEY_BOTTOMLEFT:
+      move_client = true;
+		  break;
+    case KEY_BOTTOMLEFT:
 			c->nx = c->border;
 			c->ny = c->phy->height - c->height - c->border;
-			goto move_client;
+      move_client = true;
+      break;
 		case KEY_BOTTOMRIGHT:
 			c->nx = c->phy->width - c->width - c->border;
 			c->ny = c->phy->height - c->height - c->border;
-			goto move_client;
-		case KEY_LOWER: case KEY_ALTLOWER:
+      move_client = true;
+		  break;
+    case KEY_LOWER: case KEY_ALTLOWER:
 			client_lower(c);
 			break;
 		case KEY_INFO:
@@ -155,11 +165,10 @@ static void handle_key_event(XKeyEvent *e) {
 			break;
 		default: break;
 	}
-	if (key == KEY_KILL)
+  if (key == KEY_KILL)
 		send_wm_delete(c, e->state & altmask);
-	return;
-move_client:
-	if (abs(c->nx) == c->border && c->oldw != 0)
+	if (move_client != true) return;
+  if (abs(c->nx) == c->border && c->oldw != 0)
 		c->nx = 0;
 	if (abs(c->ny) == c->border && c->oldh != 0)
 		c->ny = 0;
